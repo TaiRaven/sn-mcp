@@ -14,19 +14,58 @@ literal datetimes by hand — comparing that pattern against this project's own 
 timezone bug fixed in step 4/Troubleshooting below. Not yet borrowed: its `AuthManager`, which supports
 Basic/OAuth/API-key behind one interface (this project is Basic-only).
 
-- `get_syslog_report(date?, levels?)` — `syslog` table warnings/errors for a given day (defaults to yesterday).
-- `get_developer_work_report(start_date, end_date)` — `sys_update_xml` changes grouped by author and update set.
+## Tools
 
-Both tools return raw/grouped rows only — analysis (suggested fixes, flagged concerns) happens in
-conversation with Claude, not inside the tool.
+Both are read-only GET queries against the Table API — neither tool ever writes to the instance. Both
+return raw/grouped rows only; analysis (suggested fixes, flagged concerns) happens in conversation with
+Claude, not inside the tool. Both paginate automatically (`queryTableAll` in `servicenow-client.ts`, 1000
+rows/page, 10,000-row safety cap) instead of a hardcoded single-page `sysparm_limit` — if a query hits the
+cap, the response leads with an explicit `⚠ Truncated` text block before the JSON, rather than silently
+returning a partial report. Registered for both entrypoints from the same `src/create-server.ts`.
 
-Both paginate automatically (`queryTableAll` in `servicenow-client.ts`, 1000 rows/page, 10,000-row safety
-cap) instead of the original hardcoded `sysparm_limit: 1000`, which would have silently truncated any day
-with more than 1000 matching rows. If a query hits the 10k cap, the tool response leads with an explicit
-`⚠ Truncated` text block before the JSON — narrow the date range/levels, or raise `maxRows` in
-`queryTableAll` if a genuinely wider report is needed. Added 2026-08-26; this PDI has never come close to
-1000 rows/day, so the multi-page loop itself was verified directly against `queryTableAll` with a forced
-small page size rather than by tripping it through real report volume.
+### `get_syslog_report`
+
+Fetch `syslog` rows for a single day, filtered to warning/error by default.
+
+| Parameter | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `date` | `string` | no | yesterday | `YYYY-MM-DD` |
+| `levels` | `string[]` | no | `["warning","error"]` | Friendly names (`trace`/`debug`/`info`/`warning`/`error`/`fatal`), mapped internally to this instance's numeric `syslog.level` codes — see README §4 if pointing at a different instance. |
+
+Returns a JSON array of:
+
+```json
+{
+  "sys_created_on": "2026-08-25 17:30:24",
+  "message": "SG-Azure Request failed with statusCode: 403 Code: AccessDenied ...",
+  "source": "sn_sg_azure_integ",
+  "level": "2",
+  "node": "..."
+}
+```
+
+### `get_developer_work_report`
+
+Fetch `sys_update_xml` changes between two dates, grouped by author and update set.
+
+| Parameter | Type | Required | Default | Notes |
+|---|---|---|---|---|
+| `start_date` | `string` | yes | — | `YYYY-MM-DD` |
+| `end_date` | `string` | yes | — | `YYYY-MM-DD` |
+
+Returns a JSON array of:
+
+```json
+{
+  "author": "system",
+  "updateSet": "Default",
+  "isDefaultUpdateSet": true,
+  "changeCount": 2,
+  "changes": [
+    { "name": "...", "type": "Service Graph Connections State", "created": "2026-08-25 10:30:30" }
+  ]
+}
+```
 
 ## 1. Provision a read-only ServiceNow service account (manual, one-time)
 

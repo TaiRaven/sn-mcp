@@ -1,7 +1,22 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
+import { registerTool, jsonResult } from "./register-tool.js";
 import { getSyslogReport } from "./tools/syslog.js";
 import { getDeveloperWorkReport } from "./tools/dev-work-report.js";
+import {
+  CreateIncidentShape,
+  createIncident,
+  UpdateIncidentShape,
+  updateIncident,
+  AddCommentShape,
+  addComment,
+  ResolveIncidentShape,
+  resolveIncident,
+  ListIncidentsShape,
+  listIncidents,
+  GetIncidentByNumberShape,
+  getIncidentByNumber,
+} from "./tools/incident.js";
 
 // Shared by both entrypoints (stdio in index.ts, HTTP in http.ts) — HTTP needs a fresh
 // server instance per session, so this can't just be a module-level singleton.
@@ -10,6 +25,8 @@ export function createReportsServer(): McpServer {
     name: "servicenow-reports",
     version: "1.0.0",
   });
+
+  // --- syslog / dev-work reports ---
 
   server.tool(
     "get_syslog_report",
@@ -28,21 +45,7 @@ export function createReportsServer(): McpServer {
             "verify these match this instance's actual level choice values if the report comes back empty unexpectedly."
         ),
     },
-    async ({ date, levels }) => {
-      const { rows, truncated } = await getSyslogReport(date, levels);
-      const content: { type: "text"; text: string }[] = [];
-      if (truncated) {
-        content.push({
-          type: "text",
-          text:
-            `⚠ Truncated: hit the pagination safety cap (${rows.length} rows) before the query was ` +
-            "exhausted. This report is incomplete — narrow the date range or levels, or raise the cap in " +
-            "queryTableAll if a wider report is genuinely needed.",
-        });
-      }
-      content.push({ type: "text", text: JSON.stringify(rows, null, 2) });
-      return { content };
-    }
+    async ({ date, levels }) => jsonResult(await getSyslogReport(date, levels))
   );
 
   server.tool(
@@ -54,21 +57,52 @@ export function createReportsServer(): McpServer {
       start_date: z.string().describe("Start date, YYYY-MM-DD"),
       end_date: z.string().describe("End date, YYYY-MM-DD"),
     },
-    async ({ start_date, end_date }) => {
-      const { groups, truncated } = await getDeveloperWorkReport(start_date, end_date);
-      const content: { type: "text"; text: string }[] = [];
-      if (truncated) {
-        content.push({
-          type: "text",
-          text:
-            "⚠ Truncated: hit the pagination safety cap before the query was exhausted. Grouping was " +
-            "computed from a partial result — narrow the date range, or raise the cap in queryTableAll if " +
-            "a wider report is genuinely needed.",
-        });
-      }
-      content.push({ type: "text", text: JSON.stringify(groups, null, 2) });
-      return { content };
-    }
+    async ({ start_date, end_date }) => jsonResult(await getDeveloperWorkReport(start_date, end_date))
+  );
+
+  // --- incident_tools ---
+
+  registerTool(
+    server,
+    "create_incident",
+    "Create a new incident.",
+    CreateIncidentShape,
+    createIncident
+  );
+  registerTool(
+    server,
+    "update_incident",
+    "Update an existing incident (accepts sys_id or incident number).",
+    UpdateIncidentShape,
+    updateIncident
+  );
+  registerTool(
+    server,
+    "add_comment",
+    "Add a comment or work note to an incident.",
+    AddCommentShape,
+    addComment
+  );
+  registerTool(
+    server,
+    "resolve_incident",
+    "Resolve an incident (sets state to Resolved with a resolution code and notes).",
+    ResolveIncidentShape,
+    resolveIncident
+  );
+  registerTool(
+    server,
+    "list_incidents",
+    "List incidents, most recent first. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListIncidentsShape,
+    listIncidents
+  );
+  registerTool(
+    server,
+    "get_incident_by_number",
+    "Fetch a single incident by its number (e.g. INC0010001).",
+    GetIncidentByNumberShape,
+    getIncidentByNumber
   );
 
   return server;

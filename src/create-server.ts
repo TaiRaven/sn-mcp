@@ -37,6 +37,34 @@ import {
   ListGroupsShape,
   listGroups,
 } from "./tools/user.js";
+import {
+  ListCatalogItemsShape,
+  listCatalogItems,
+  GetCatalogItemShape,
+  getCatalogItem,
+  ListCatalogCategoriesShape,
+  listCatalogCategories,
+  CreateCatalogCategoryShape,
+  createCatalogCategory,
+  UpdateCatalogCategoryShape,
+  updateCatalogCategory,
+  MoveCatalogItemsShape,
+  moveCatalogItems,
+} from "./tools/catalog.js";
+import {
+  CreateCatalogItemVariableShape,
+  createCatalogItemVariable,
+  ListCatalogItemVariablesShape,
+  listCatalogItemVariables,
+  UpdateCatalogItemVariableShape,
+  updateCatalogItemVariable,
+} from "./tools/catalog-variables.js";
+import {
+  OptimizationRecommendationsShape,
+  getOptimizationRecommendations,
+  UpdateCatalogItemShape,
+  updateCatalogItem,
+} from "./tools/catalog-optimization.js";
 
 // Shared by both entrypoints (stdio in index.ts, HTTP in http.ts) — HTTP needs a fresh
 // server instance per session, so this can't just be a module-level singleton.
@@ -183,6 +211,95 @@ export function createReportsServer(): McpServer {
     "List groups. limit/offset paginate — this returns one bounded page, not the full table.",
     ListGroupsShape,
     listGroups
+  );
+
+  // --- catalog_tools ---
+
+  registerTool(
+    server,
+    "list_catalog_items",
+    "List service catalog items. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListCatalogItemsShape,
+    listCatalogItems
+  );
+  registerTool(
+    server,
+    "get_catalog_item",
+    "Fetch a single catalog item by sys_id, including its variables (form fields).",
+    GetCatalogItemShape,
+    getCatalogItem
+  );
+  registerTool(
+    server,
+    "list_catalog_categories",
+    "List service catalog categories. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListCatalogCategoriesShape,
+    listCatalogCategories
+  );
+  registerTool(
+    server,
+    "create_catalog_category",
+    "Create a new service catalog category.",
+    CreateCatalogCategoryShape,
+    createCatalogCategory
+  );
+  registerTool(
+    server,
+    "update_catalog_category",
+    "Update an existing service catalog category.",
+    UpdateCatalogCategoryShape,
+    updateCatalogCategory
+  );
+  registerTool(
+    server,
+    "move_catalog_items",
+    "Move one or more catalog items to a different category.",
+    MoveCatalogItemsShape,
+    moveCatalogItems
+  );
+
+  // --- catalog_variables ---
+
+  registerTool(
+    server,
+    "create_catalog_item_variable",
+    "Create a new variable (form field) on a catalog item.",
+    CreateCatalogItemVariableShape,
+    createCatalogItemVariable
+  );
+  registerTool(
+    server,
+    "list_catalog_item_variables",
+    "List the variables (form fields) defined on a catalog item.",
+    ListCatalogItemVariablesShape,
+    listCatalogItemVariables
+  );
+  registerTool(
+    server,
+    "update_catalog_item_variable",
+    "Update an existing catalog item variable.",
+    UpdateCatalogItemVariableShape,
+    updateCatalogItemVariable
+  );
+
+  // --- catalog_optimization ---
+
+  registerTool(
+    server,
+    "get_optimization_recommendations",
+    "SIMULATED catalog optimization recommendations — low_usage/high_abandonment/slow_fulfillment " +
+      "stats are randomly fabricated (no real usage-tracking data source exists), matching the " +
+      "reference project's own use of Python's random module. inactive_items and description_quality " +
+      "reflect real instance data. Never present this as real analysis.",
+    OptimizationRecommendationsShape,
+    getOptimizationRecommendations
+  );
+  registerTool(
+    server,
+    "update_catalog_item",
+    "Update an existing catalog item's core fields (name, description, category, price, active, order).",
+    UpdateCatalogItemShape,
+    updateCatalogItem
   );
 
   return server;

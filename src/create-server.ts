@@ -65,6 +65,40 @@ import {
   UpdateCatalogItemShape,
   updateCatalogItem,
 } from "./tools/catalog-optimization.js";
+import {
+  CreateChangeRequestShape,
+  createChangeRequest,
+  UpdateChangeRequestShape,
+  updateChangeRequest,
+  ListChangeRequestsShape,
+  listChangeRequests,
+  GetChangeRequestDetailsShape,
+  getChangeRequestDetails,
+  AddChangeTaskShape,
+  addChangeTask,
+  SubmitChangeForApprovalShape,
+  submitChangeForApproval,
+  ApproveChangeShape,
+  approveChange,
+  RejectChangeShape,
+  rejectChange,
+} from "./tools/change.js";
+import {
+  ListChangesetsShape,
+  listChangesets,
+  GetChangesetDetailsShape,
+  getChangesetDetails,
+  CreateChangesetShape,
+  createChangeset,
+  UpdateChangesetShape,
+  updateChangeset,
+  CommitChangesetShape,
+  commitChangeset,
+  PublishChangesetShape,
+  publishChangeset,
+  AddFileToChangesetShape,
+  addFileToChangeset,
+} from "./tools/changeset.js";
 
 // Shared by both entrypoints (stdio in index.ts, HTTP in http.ts) — HTTP needs a fresh
 // server instance per session, so this can't just be a module-level singleton.
@@ -300,6 +334,123 @@ export function createReportsServer(): McpServer {
     "Update an existing catalog item's core fields (name, description, category, price, active, order).",
     UpdateCatalogItemShape,
     updateCatalogItem
+  );
+
+  // --- change_tools ---
+
+  registerTool(
+    server,
+    "create_change_request",
+    "Create a new change request.",
+    CreateChangeRequestShape,
+    createChangeRequest
+  );
+  registerTool(
+    server,
+    "update_change_request",
+    "Update an existing change request (accepts sys_id or change number).",
+    UpdateChangeRequestShape,
+    updateChangeRequest
+  );
+  registerTool(
+    server,
+    "list_change_requests",
+    "List change requests. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListChangeRequestsShape,
+    listChangeRequests
+  );
+  registerTool(
+    server,
+    "get_change_request_details",
+    "Fetch a single change request with its associated change tasks.",
+    GetChangeRequestDetailsShape,
+    getChangeRequestDetails
+  );
+  registerTool(
+    server,
+    "add_change_task",
+    "Add a task to a change request.",
+    AddChangeTaskShape,
+    addChangeTask
+  );
+  registerTool(
+    server,
+    "submit_change_for_approval",
+    "Submit a change request for approval (sets state to Assess and creates an approval record). " +
+      "NOTE: may fail on instances with Change Model governance (state transition business rules) " +
+      "or where sysapproval_approver doesn't accept direct inserts — confirmed on this PDI.",
+    SubmitChangeForApprovalShape,
+    submitChangeForApproval
+  );
+  registerTool(
+    server,
+    "approve_change",
+    "Approve a change request's pending approval record and move the change to Implement. " +
+      "NOTE: may fail on instances with Change Model governance — confirmed on this PDI.",
+    ApproveChangeShape,
+    approveChange
+  );
+  registerTool(
+    server,
+    "reject_change",
+    "Reject a change request's pending approval record and cancel the change. " +
+      "NOTE: may fail on instances with Change Model governance — confirmed on this PDI.",
+    RejectChangeShape,
+    rejectChange
+  );
+
+  // --- changeset_tools ---
+
+  registerTool(
+    server,
+    "list_changesets",
+    "List changesets (update sets). limit/offset paginate — this returns one bounded page, not the full table.",
+    ListChangesetsShape,
+    listChangesets
+  );
+  registerTool(
+    server,
+    "get_changeset_details",
+    "Fetch a single changeset with the changes (sys_update_xml rows) it contains.",
+    GetChangesetDetailsShape,
+    getChangesetDetails
+  );
+  registerTool(
+    server,
+    "create_changeset",
+    "Create a new changeset (update set).",
+    CreateChangesetShape,
+    createChangeset
+  );
+  registerTool(
+    server,
+    "update_changeset",
+    "Update an existing changeset (accepts sys_id or name).",
+    UpdateChangesetShape,
+    updateChangeset
+  );
+  registerTool(
+    server,
+    "commit_changeset",
+    "Commit a changeset (sets state to complete).",
+    CommitChangesetShape,
+    commitChangeset
+  );
+  registerTool(
+    server,
+    "publish_changeset",
+    "Publish a changeset. NOTE: requires a 'published' state choice to exist on sys_update_set — " +
+      "not present on every instance (confirmed absent on this PDI).",
+    PublishChangesetShape,
+    publishChangeset
+  );
+  registerTool(
+    server,
+    "add_file_to_changeset",
+    "Add a file (sys_update_xml record) to a changeset. NOTE: sys_update_xml often blocks direct " +
+      "inserts via ACL (confirmed on this PDI) since it normally holds system-generated content.",
+    AddFileToChangesetShape,
+    addFileToChangeset
   );
 
   return server;

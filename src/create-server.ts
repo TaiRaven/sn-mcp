@@ -17,6 +17,26 @@ import {
   GetIncidentByNumberShape,
   getIncidentByNumber,
 } from "./tools/incident.js";
+import {
+  CreateUserShape,
+  createUser,
+  UpdateUserShape,
+  updateUser,
+  GetUserShape,
+  getUser,
+  ListUsersShape,
+  listUsers,
+  CreateGroupShape,
+  createGroup,
+  UpdateGroupShape,
+  updateGroup,
+  AddGroupMembersShape,
+  addGroupMembers,
+  RemoveGroupMembersShape,
+  removeGroupMembers,
+  ListGroupsShape,
+  listGroups,
+} from "./tools/user.js";
 
 // Shared by both entrypoints (stdio in index.ts, HTTP in http.ts) — HTTP needs a fresh
 // server instance per session, so this can't just be a module-level singleton.
@@ -103,6 +123,66 @@ export function createReportsServer(): McpServer {
     "Fetch a single incident by its number (e.g. INC0010001).",
     GetIncidentByNumberShape,
     getIncidentByNumber
+  );
+
+  // --- user_tools ---
+
+  registerTool(server, "create_user", "Create a new user.", CreateUserShape, createUser);
+  registerTool(
+    server,
+    "update_user",
+    "Update an existing user (accepts sys_id, username, or email).",
+    UpdateUserShape,
+    updateUser
+  );
+  registerTool(
+    server,
+    "get_user",
+    "Fetch a single user by sys_id, username, or email.",
+    GetUserShape,
+    getUser
+  );
+  registerTool(
+    server,
+    "list_users",
+    "List users, most recent first. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListUsersShape,
+    listUsers
+  );
+  registerTool(
+    server,
+    "create_group",
+    "Create a new group, optionally with initial members.",
+    CreateGroupShape,
+    createGroup
+  );
+  registerTool(
+    server,
+    "update_group",
+    "Update an existing group (accepts sys_id or name).",
+    UpdateGroupShape,
+    updateGroup
+  );
+  registerTool(
+    server,
+    "add_group_members",
+    "Add one or more members to a group.",
+    AddGroupMembersShape,
+    addGroupMembers
+  );
+  registerTool(
+    server,
+    "remove_group_members",
+    "Remove one or more members from a group.",
+    RemoveGroupMembersShape,
+    removeGroupMembers
+  );
+  registerTool(
+    server,
+    "list_groups",
+    "List groups. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListGroupsShape,
+    listGroups
   );
 
   return server;

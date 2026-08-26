@@ -63,7 +63,11 @@ export interface QueryOptions {
   sysparm_fields?: string;
   sysparm_limit?: number;
   sysparm_offset?: number;
-  sysparm_display_value?: boolean;
+  // "all" returns both raw value and display_value per reference field (richer than `true`, which
+  // flattens to just the display string) — needed to dot-walk a reference's sys_id back out of a
+  // display-value read, used by knowledge-base.ts's list_articles/list_categories to match the
+  // reference project's own sysparm_display_value="all" usage.
+  sysparm_display_value?: boolean | "all";
 }
 
 export async function queryTable<T = Record<string, string>>(
@@ -76,7 +80,12 @@ export async function queryTable<T = Record<string, string>>(
   if (options.sysparm_fields) url.searchParams.set("sysparm_fields", options.sysparm_fields);
   if (options.sysparm_limit) url.searchParams.set("sysparm_limit", String(options.sysparm_limit));
   if (options.sysparm_offset) url.searchParams.set("sysparm_offset", String(options.sysparm_offset));
-  if (options.sysparm_display_value) url.searchParams.set("sysparm_display_value", "true");
+  if (options.sysparm_display_value) {
+    url.searchParams.set(
+      "sysparm_display_value",
+      options.sysparm_display_value === true ? "true" : options.sysparm_display_value
+    );
+  }
 
   const data = await snRequest<{ result: T[] }>("GET", url, table);
   return data!.result;

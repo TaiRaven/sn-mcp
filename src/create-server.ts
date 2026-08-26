@@ -99,6 +99,26 @@ import {
   AddFileToChangesetShape,
   addFileToChangeset,
 } from "./tools/changeset.js";
+import {
+  CreateKnowledgeBaseShape,
+  createKnowledgeBase,
+  ListKnowledgeBasesShape,
+  listKnowledgeBases,
+  CreateCategoryShape,
+  createCategory,
+  CreateArticleShape,
+  createArticle,
+  UpdateArticleShape,
+  updateArticle,
+  PublishArticleShape,
+  publishArticle,
+  ListArticlesShape,
+  listArticles,
+  GetArticleShape,
+  getArticle,
+  ListCategoriesShape,
+  listCategories,
+} from "./tools/knowledge-base.js";
 
 // Shared by both entrypoints (stdio in index.ts, HTTP in http.ts) — HTTP needs a fresh
 // server instance per session, so this can't just be a module-level singleton.
@@ -451,6 +471,74 @@ export function createReportsServer(): McpServer {
       "inserts via ACL (confirmed on this PDI) since it normally holds system-generated content.",
     AddFileToChangesetShape,
     addFileToChangeset
+  );
+
+  // --- knowledge_base ---
+
+  registerTool(
+    server,
+    "create_knowledge_base",
+    "Create a new knowledge base.",
+    CreateKnowledgeBaseShape,
+    createKnowledgeBase
+  );
+  registerTool(
+    server,
+    "list_knowledge_bases",
+    "List knowledge bases. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListKnowledgeBasesShape,
+    listKnowledgeBases
+  );
+  registerTool(
+    server,
+    "create_category",
+    "Create a new category in a knowledge base.",
+    CreateCategoryShape,
+    createCategory
+  );
+  registerTool(
+    server,
+    "create_article",
+    "Create a new knowledge article.",
+    CreateArticleShape,
+    createArticle
+  );
+  registerTool(
+    server,
+    "update_article",
+    "Update an existing knowledge article.",
+    UpdateArticleShape,
+    updateArticle
+  );
+  registerTool(
+    server,
+    "publish_article",
+    "Change a knowledge article's workflow state (defaults to published). NOTE: confirmed on this " +
+      "PDI that a direct field write silently reverts to draft — article state appears governed by " +
+      "the platform's own publish flow, not settable via a bare Table API write.",
+    PublishArticleShape,
+    publishArticle
+  );
+  registerTool(
+    server,
+    "list_articles",
+    "List knowledge articles. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListArticlesShape,
+    listArticles
+  );
+  registerTool(
+    server,
+    "get_article",
+    "Fetch a single knowledge article by sys_id.",
+    GetArticleShape,
+    getArticle
+  );
+  registerTool(
+    server,
+    "list_categories",
+    "List knowledge base categories. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListCategoriesShape,
+    listCategories
   );
 
   return server;

@@ -2,10 +2,11 @@
 
 Local MCP server for ServiceNow: two purpose-built on-demand reports (the original build), plus a full
 read/write port of [echelon-ai-labs/servicenow-mcp](https://github.com/echelon-ai-labs/servicenow-mcp) — a
-larger Python/FastMCP ServiceNow server — giving 78 tools total across 15 domains. Built from the plan in
-[[ServiceNow MCP Server — Syslog & Dev Work Reports (Plan)]]; the port followed its own plan, preserved at
-`C:\Users\willr\.claude\plans\structured-spinning-rain.md`. Setup narrative and troubleshooting also live in
-the vault: [[ServiceNow MCP Server — Syslog & Dev Work Reports (Setup Guide)]].
+larger Python/FastMCP ServiceNow server — giving 78 tools total across 15 domains. Built from a plan kept in
+the author's private Obsidian vault ("ServiceNow MCP Server — Syslog & Dev Work Reports (Plan)"); the port
+followed its own plan, preserved at `C:\Users\willr\.claude\plans\structured-spinning-rain.md`. Setup
+narrative and troubleshooting also live in that vault, in a matching "(Setup Guide)" note — not included in
+this repo.
 
 Borrowed from the reference project: a remote-reachable HTTP transport alongside stdio (step 7 below) — it
 exposes both stdio and SSE, this project uses stdio and the modern Streamable HTTP equivalent; ServiceNow's

@@ -149,6 +149,18 @@ import {
   ListProjectsShape,
   listProjects,
 } from "./tools/project.js";
+import {
+  ListScriptIncludesShape,
+  listScriptIncludes,
+  GetScriptIncludeShape,
+  getScriptInclude,
+  CreateScriptIncludeShape,
+  createScriptInclude,
+  UpdateScriptIncludeShape,
+  updateScriptInclude,
+  DeleteScriptIncludeShape,
+  deleteScriptInclude,
+} from "./tools/script-include.js";
 
 // Shared by both entrypoints (stdio in index.ts, HTTP in http.ts) — HTTP needs a fresh
 // server instance per session, so this can't just be a module-level singleton.
@@ -668,6 +680,47 @@ export function createReportsServer(): McpServer {
     "List projects. limit/offset paginate — this returns one bounded page, not the full table.",
     ListProjectsShape,
     listProjects
+  );
+
+  // --- script_include_tools ---
+  // HIGHEST-CARE domain in this project: `create_script_include`/`update_script_include` write
+  // real, executable server-side JavaScript. Test only with inert, comment-only script bodies and
+  // never leave a live client-callable throwaway script include active — see Batch 7 notes.
+
+  registerTool(
+    server,
+    "list_script_includes",
+    "List script includes (metadata only, not script bodies). limit/offset paginate — this returns one bounded page, not the full table.",
+    ListScriptIncludesShape,
+    listScriptIncludes
+  );
+  registerTool(
+    server,
+    "get_script_include",
+    "Fetch a single script include, including its full script body.",
+    GetScriptIncludeShape,
+    getScriptInclude
+  );
+  registerTool(
+    server,
+    "create_script_include",
+    "Create a new script include. WARNING: `script` is live server-side JavaScript that ServiceNow will execute — never write code from an untrusted source here.",
+    CreateScriptIncludeShape,
+    createScriptInclude
+  );
+  registerTool(
+    server,
+    "update_script_include",
+    "Update an existing script include (accepts name or sys_id). WARNING: `script` is live server-side JavaScript.",
+    UpdateScriptIncludeShape,
+    updateScriptInclude
+  );
+  registerTool(
+    server,
+    "delete_script_include",
+    "Delete a script include (accepts name or sys_id).",
+    DeleteScriptIncludeShape,
+    deleteScriptInclude
   );
 
   return server;

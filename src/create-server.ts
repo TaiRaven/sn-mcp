@@ -161,6 +161,26 @@ import {
   DeleteScriptIncludeShape,
   deleteScriptInclude,
 } from "./tools/script-include.js";
+import {
+  ListWorkflowsShape,
+  listWorkflows,
+  ListWorkflowVersionsShape,
+  listWorkflowVersions,
+  GetWorkflowDetailsShape,
+  getWorkflowDetails,
+  GetWorkflowActivitiesShape,
+  getWorkflowActivities,
+  CreateWorkflowShape,
+  createWorkflow,
+  UpdateWorkflowShape,
+  updateWorkflow,
+  AddWorkflowActivityShape,
+  addWorkflowActivity,
+  UpdateWorkflowActivityShape,
+  updateWorkflowActivity,
+  DeleteWorkflowActivityShape,
+  deleteWorkflowActivity,
+} from "./tools/workflow.js";
 
 // Shared by both entrypoints (stdio in index.ts, HTTP in http.ts) — HTTP needs a fresh
 // server instance per session, so this can't just be a module-level singleton.
@@ -721,6 +741,80 @@ export function createReportsServer(): McpServer {
     "Delete a script include (accepts name or sys_id).",
     DeleteScriptIncludeShape,
     deleteScriptInclude
+  );
+
+  // --- workflow_tools ---
+  // Classic Workflow (legacy, superseded by Flow Designer on modern instances). 3 of the
+  // reference's 12 tools are NOT ported — activate_workflow/deactivate_workflow/
+  // reorder_workflow_activities all depend on fields (`active` on wf_workflow, `order` on
+  // wf_activity) that don't exist on this PDI's schema at all, confirmed via sys_dictionary before
+  // writing any code. See tools/workflow.ts for the full gap writeup, including the
+  // add_workflow_activity `activity_type`->`activity_definition` field-name fix and the
+  // (reference project's own, not introduced here) `workflow_version_id` creation gap.
+
+  registerTool(
+    server,
+    "list_workflows",
+    "List classic Workflow definitions (wf_workflow). limit/offset paginate — this returns one bounded page, not the full table.",
+    ListWorkflowsShape,
+    listWorkflows
+  );
+  registerTool(
+    server,
+    "get_workflow_details",
+    "Fetch a single workflow definition, optionally including its versions.",
+    GetWorkflowDetailsShape,
+    getWorkflowDetails
+  );
+  registerTool(
+    server,
+    "list_workflow_versions",
+    "List the versions (wf_workflow_version) of a workflow.",
+    ListWorkflowVersionsShape,
+    listWorkflowVersions
+  );
+  registerTool(
+    server,
+    "get_workflow_activities",
+    "Fetch the activities (wf_activity) for a workflow version, defaulting to the latest published version.",
+    GetWorkflowActivitiesShape,
+    getWorkflowActivities
+  );
+  registerTool(
+    server,
+    "create_workflow",
+    "Create a new (empty) workflow definition.",
+    CreateWorkflowShape,
+    createWorkflow
+  );
+  registerTool(
+    server,
+    "update_workflow",
+    "Update an existing workflow definition (accepts name or sys_id).",
+    UpdateWorkflowShape,
+    updateWorkflow
+  );
+  registerTool(
+    server,
+    "add_workflow_activity",
+    "Add an activity to a workflow version. Requires a real workflow_version_id — see list_workflow_versions. " +
+      "`activity_type` is resolved by name against wf_activity_definition (e.g. 'Notification', 'Approval Coordinator').",
+    AddWorkflowActivityShape,
+    addWorkflowActivity
+  );
+  registerTool(
+    server,
+    "update_workflow_activity",
+    "Update an existing workflow activity's name or extra fields (accepts sys_id).",
+    UpdateWorkflowActivityShape,
+    updateWorkflowActivity
+  );
+  registerTool(
+    server,
+    "delete_workflow_activity",
+    "Delete a workflow activity (accepts sys_id).",
+    DeleteWorkflowActivityShape,
+    deleteWorkflowActivity
   );
 
   return server;

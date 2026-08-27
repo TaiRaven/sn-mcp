@@ -1,20 +1,40 @@
 # ServiceNow MCP Reports
 
-Local MCP server exposing two on-demand ServiceNow reports, built from the plan in
-[[ServiceNow MCP Server — Syslog & Dev Work Reports (Plan)]]. Setup narrative and troubleshooting also
-live in the vault: [[ServiceNow MCP Server — Syslog & Dev Work Reports (Setup Guide)]].
+Local MCP server for ServiceNow: two purpose-built on-demand reports (the original build), plus a full
+read/write port of [echelon-ai-labs/servicenow-mcp](https://github.com/echelon-ai-labs/servicenow-mcp) — a
+larger Python/FastMCP ServiceNow server — giving 78 tools total across 15 domains. Built from the plan in
+[[ServiceNow MCP Server — Syslog & Dev Work Reports (Plan)]]; the port followed its own plan, preserved at
+`C:\Users\willr\.claude\plans\structured-spinning-rain.md`. Setup narrative and troubleshooting also live in
+the vault: [[ServiceNow MCP Server — Syslog & Dev Work Reports (Setup Guide)]].
 
-For ideas on extending this beyond the two current tools, see
-[echelon-ai-labs/servicenow-mcp](https://github.com/echelon-ai-labs/servicenow-mcp) — a much larger
-Python/FastMCP ServiceNow server (incidents, changes, catalog, knowledge base, script includes, Agile
-tools). Already borrowed from it: a remote-reachable HTTP transport alongside stdio (step 7) — that repo
-exposes both stdio and SSE; and its date-range filters use ServiceNow's own relative-date keywords
-(`ONLast week@javascript:gs.beginningOfLastWeek()@javascript:gs.endOfLastWeek()`) rather than constructing
-literal datetimes by hand — comparing that pattern against this project's own query is what surfaced the
-timezone bug fixed in step 4/Troubleshooting below. Not yet borrowed: its `AuthManager`, which supports
-Basic/OAuth/API-key behind one interface (this project is Basic-only).
+Borrowed from the reference project: a remote-reachable HTTP transport alongside stdio (step 7 below) — it
+exposes both stdio and SSE, this project uses stdio and the modern Streamable HTTP equivalent; ServiceNow's
+own relative-date keywords informed comparing against this project's own date-range query style, which is
+what originally surfaced the timezone bug described in step 4/Troubleshooting; and (from the full port) its
+82-tool inventory across 14 domains, ported with full read/write parity per an explicit user decision — not
+its `AuthManager` (Basic/OAuth/API-key behind one interface), which stays out of scope; this project remains
+Basic-only.
+
+**Of the reference's 82 tools, 76 were ported** (giving 78 total with the 2 original report tools). 6 were
+deliberately not ported — not porting mistakes, each confirmed against this PDI's live schema before being
+dropped:
+
+- `create_epic` / `update_epic` / `list_epics` — `rm_epic` is not a valid table on this PDI (confirmed via
+  `sys_db_object`; this instance's Agile plugin install is scrum-only, no Epic/Project-portfolio linkage).
+- `activate_workflow` / `deactivate_workflow` — `wf_workflow` has no `active` field on this PDI at all
+  (confirmed by dumping every element on the table).
+- `reorder_workflow_activities` — `wf_activity` has no `order` field either; classic Workflow ordering here
+  is driven by a visual transition graph, not a simple integer.
+
+`get_optimization_recommendations` is ported but **partially simulated** — see its entry below.
+`percent_complete` on the project tools is intentionally renamed from the reference's `percentage_complete`,
+which is a genuine bug in the reference project (doesn't match the real `pm_project` column, so it silently
+no-ops there). Full per-batch build notes, gotchas, and platform gaps live in project memory
+(`project_servicenow_mcp_reports.md`) and in code comments at each domain file (`src/tools/*.ts`).
 
 ## Tools
+
+### Reports (read-only)
 
 Both are read-only GET queries against the Table API — neither tool ever writes to the instance. Both
 return raw/grouped rows only; analysis (suggested fixes, flagged concerns) happens in conversation with
@@ -23,7 +43,7 @@ rows/page, 10,000-row safety cap) instead of a hardcoded single-page `sysparm_li
 cap, the response leads with an explicit `⚠ Truncated` text block before the JSON, rather than silently
 returning a partial report. Registered for both entrypoints from the same `src/create-server.ts`.
 
-### `get_syslog_report`
+#### `get_syslog_report`
 
 Fetch `syslog` rows for a single day, filtered to warning/error by default.
 
@@ -44,7 +64,7 @@ Returns a JSON array of:
 }
 ```
 
-### `get_developer_work_report`
+#### `get_developer_work_report`
 
 Fetch `sys_update_xml` changes between two dates, grouped by author and update set.
 
@@ -67,7 +87,167 @@ Returns a JSON array of:
 }
 ```
 
-## 1. Provision a read-only ServiceNow service account (manual, one-time)
+### Incident (`src/tools/incident.ts`, 6 tools)
+
+`assigned_to`/`assignment_group`/`caller_id` accept a username, email, or sys_id, written as display
+values. `resolve_incident`'s `resolution_code` is a choice field — verified against `sys_choice` on this PDI
+rather than guessed (see project memory for the confirmed value list).
+
+| Tool | Description |
+|---|---|
+| `create_incident` | Create a new incident. |
+| `update_incident` | Update an existing incident (accepts sys_id or incident number). |
+| `add_comment` | Add a comment or work note to an incident. |
+| `resolve_incident` | Resolve an incident (sets state to Resolved with a resolution code and notes). |
+| `list_incidents` | List incidents, most recent first. One bounded page per call, not the full table. |
+| `get_incident_by_number` | Fetch a single incident by its number (e.g. INC0010001). |
+
+### User & Group (`src/tools/user.ts`, 9 tools)
+
+`user_id`/`group_id` accept a raw sys_id, username/email, or group name. Group-membership adds dedupe
+against existing rows before inserting (a deliberate improvement over the reference, which doesn't).
+
+| Tool | Description |
+|---|---|
+| `create_user` | Create a new user. |
+| `update_user` | Update an existing user (accepts sys_id, username, or email). |
+| `get_user` | Fetch a single user by sys_id, username, or email. |
+| `list_users` | List users, most recent first. One bounded page per call. |
+| `create_group` | Create a new group, optionally with initial members. |
+| `update_group` | Update an existing group (accepts sys_id or name). |
+| `add_group_members` | Add one or more members to a group. |
+| `remove_group_members` | Remove one or more members from a group. |
+| `list_groups` | List groups. One bounded page per call. |
+
+### Catalog (`src/tools/catalog.ts` + `catalog-variables.ts` + `catalog-optimization.ts`, 11 tools)
+
+`get_optimization_recommendations` is **partially simulated**: `low_usage`/`high_abandonment`/
+`slow_fulfillment` are randomly fabricated (no real usage-tracking data source exists on this PDI, matching
+the reference project's own use of Python's `random`), while `inactive_items`/`description_quality` reflect
+real instance data — the whole response is still labeled `simulated: true` rather than splitting the
+labeling per-type, a deliberate choice. Never present this tool's output as real analysis.
+
+| Tool | Description |
+|---|---|
+| `list_catalog_items` | List service catalog items. One bounded page per call. |
+| `get_catalog_item` | Fetch a single catalog item by sys_id, including its variables (form fields). |
+| `list_catalog_categories` | List service catalog categories. One bounded page per call. |
+| `create_catalog_category` | Create a new service catalog category. |
+| `update_catalog_category` | Update an existing service catalog category. |
+| `move_catalog_items` | Move one or more catalog items to a different category. |
+| `create_catalog_item_variable` | Create a new variable (form field) on a catalog item. |
+| `list_catalog_item_variables` | List the variables (form fields) defined on a catalog item. |
+| `update_catalog_item_variable` | Update an existing catalog item variable. |
+| `get_optimization_recommendations` | SIMULATED optimization recommendations — see note above. |
+| `update_catalog_item` | Update an existing catalog item's core fields. |
+
+### Change & Changeset (`src/tools/change.ts` + `changeset.ts`, 15 tools)
+
+**Known platform gaps on this PDI** (not porting bugs — confirmed empirically, documented in each tool's own
+MCP description): `submit_change_for_approval`/`approve_change`/`reject_change`'s state transitions are
+blocked by a Change Model business rule, and `sysapproval_approver.document_id` doesn't persist via direct
+write — approval records are meant to come from ServiceNow's own Approval Engine. `add_file_to_changeset`
+is blocked by ACL on `sys_update_xml`. `publish_changeset`'s `"published"` state doesn't exist as a
+`sys_update_set` choice on this PDI (silently no-ops rather than erroring). All four tools are still
+implemented as faithful ports — the gaps are platform behavior, not something this project codes around.
+
+| Tool | Description |
+|---|---|
+| `create_change_request` | Create a new change request. |
+| `update_change_request` | Update an existing change request (accepts sys_id or change number). |
+| `list_change_requests` | List change requests. One bounded page per call. |
+| `get_change_request_details` | Fetch a single change request with its associated change tasks. |
+| `add_change_task` | Add a task to a change request. |
+| `submit_change_for_approval` | Submit for approval. NOTE: may fail — see gaps above. |
+| `approve_change` | Approve a pending approval record and move to Implement. NOTE: may fail — see gaps above. |
+| `reject_change` | Reject a pending approval record and cancel the change. NOTE: may fail — see gaps above. |
+| `list_changesets` | List changesets (update sets). One bounded page per call. |
+| `get_changeset_details` | Fetch a single changeset with the changes it contains. |
+| `create_changeset` | Create a new changeset. |
+| `update_changeset` | Update an existing changeset (accepts sys_id or name). |
+| `commit_changeset` | Commit a changeset (sets state to complete). |
+| `publish_changeset` | Publish a changeset. NOTE: may silently no-op — see gaps above. |
+| `add_file_to_changeset` | Add a file to a changeset. NOTE: often ACL-blocked — see gaps above. |
+
+### Knowledge Base (`src/tools/knowledge-base.ts`, 9 tools)
+
+`publish_article`'s direct `workflow_state` write silently reverts to draft on this PDI — modern instances
+drive publish through Flow Designer (`kb_publish_flow`), not a bare Table API write; documented in the
+tool's own description rather than fixed, since resolving the flow is out of scope. `kb_category`/
+`kb_knowledge_base` block direct deletes via ACL even for this admin-scoped account — no cleanup path exists
+through the Table API for those two tables.
+
+| Tool | Description |
+|---|---|
+| `create_knowledge_base` | Create a new knowledge base. |
+| `list_knowledge_bases` | List knowledge bases. One bounded page per call. |
+| `create_category` | Create a new category in a knowledge base. |
+| `create_article` | Create a new knowledge article. |
+| `update_article` | Update an existing knowledge article. |
+| `publish_article` | Change an article's workflow state. NOTE: silently reverts to draft — see note above. |
+| `list_articles` | List knowledge articles. One bounded page per call. |
+| `get_article` | Fetch a single knowledge article by sys_id. |
+| `list_categories` | List knowledge base categories. One bounded page per call. |
+
+### Story, Scrum Task & Project (`src/tools/story.ts` + `scrum-task.ts` + `project.ts`, 12 tools)
+
+Epic tools and `story.epic`/`story.project`/`scrum_task.type` params dropped — see the top-of-file gap list.
+`percent_complete` on the project tools is renamed from the reference's `percentage_complete` (a genuine bug
+in the reference — that name doesn't match the real `pm_project` column).
+
+| Tool | Description |
+|---|---|
+| `create_story` | Create a new story. |
+| `update_story` | Update an existing story (accepts sys_id or story number). |
+| `list_stories` | List stories. One bounded page per call. |
+| `list_story_dependencies` | List dependencies between stories. |
+| `create_story_dependency` | Create a dependency between two stories. |
+| `delete_story_dependency` | Delete a story dependency record. |
+| `create_scrum_task` | Create a new scrum task under a story. |
+| `update_scrum_task` | Update an existing scrum task (accepts sys_id or scrum task number). |
+| `list_scrum_tasks` | List scrum tasks. One bounded page per call. |
+| `create_project` | Create a new project. |
+| `update_project` | Update an existing project (accepts sys_id or project number). |
+| `list_projects` | List projects. One bounded page per call. |
+
+### Script Include (`src/tools/script-include.ts`, 5 tools)
+
+**Highest-care domain in this project** — `script` is live, executable server-side JavaScript. Never write
+code from an untrusted source through these tools. `script_include_id` accepts a name, or a sys_id prefixed
+with `sys_id:` to bypass name lookup.
+
+| Tool | Description |
+|---|---|
+| `list_script_includes` | List script includes (metadata only, not script bodies). One bounded page per call. |
+| `get_script_include` | Fetch a single script include, including its full script body. |
+| `create_script_include` | Create a new script include. WARNING: live executable code. |
+| `update_script_include` | Update an existing script include. WARNING: live executable code. |
+| `delete_script_include` | Delete a script include. |
+
+### Workflow (`src/tools/workflow.ts`, 9 tools)
+
+Classic Workflow — legacy, superseded by Flow Designer on modern instances. Confirmed live and queryable on
+this PDI before porting. `activate_workflow`/`deactivate_workflow`/`reorder_workflow_activities` are not
+ported — see the top-of-file gap list. `add_workflow_activity`'s `activity_type` resolves by name against
+`wf_activity_definition` (the real reference field), not a flat string as the reference project assumes.
+**Known reference-project gap, ported as-is:** `add_workflow_activity` requires a real `workflow_version_id`
+that no tool in this domain creates — `create_workflow` makes an empty `wf_workflow` row with no version;
+get one via `list_workflow_versions` against a pre-existing workflow, or create one directly via the Table
+API (not exposed as a tool here, matching the reference's own scope).
+
+| Tool | Description |
+|---|---|
+| `list_workflows` | List classic Workflow definitions. One bounded page per call. |
+| `get_workflow_details` | Fetch a single workflow definition, optionally including its versions. |
+| `list_workflow_versions` | List the versions of a workflow. |
+| `get_workflow_activities` | Fetch activities for a workflow version, defaulting to the latest published version. |
+| `create_workflow` | Create a new (empty) workflow definition. |
+| `update_workflow` | Update an existing workflow definition (accepts name or sys_id). |
+| `add_workflow_activity` | Add an activity to a workflow version. See gap note above. |
+| `update_workflow_activity` | Update an existing workflow activity's name or extra fields. |
+| `delete_workflow_activity` | Delete a workflow activity. |
+
+## 1. Provision a ServiceNow service account (manual, one-time)
 
 Do this in the PDI (`https://dev203275.service-now.com`), logged in as an admin:
 
@@ -79,13 +259,24 @@ Do this in the PDI (`https://dev203275.service-now.com`), logged in as an admin:
      correct password, because the account is also permitted interactive UI login. Symptom if missed: every
      REST call 401s with `"User is not authenticated"` while logging into the UI with the same credentials
      works fine. See Troubleshooting.
-2. On that user record → **Roles** related list → **Edit** → add:
-   - `rest_api_explorer` (REST API access)
-   - Read access to `syslog` and `sys_update_xml`/`sys_update_set` — on a PDI, `snc_read_only` or the
-     built-in `itil` role typically covers these; confirm the user can actually read those tables (see
-     step 3 below) rather than assuming the role name.
-   - **Do not** grant `admin` — this account should only ever query, per the original plan.
+2. On that user record → **Roles** related list → **Edit** → add roles for whichever tools you actually need
+   (see below).
 3. Copy `.env.example` to `.env` and fill in `SN_USER` / `SN_PASS` with this new account.
+
+**Role scope has changed since the original 2-tool build.** The account was originally intentionally
+read-only (`rest_api_explorer` plus read access to `syslog`/`sys_update_xml`/`sys_update_set`). Once the
+full read/write port (82 reference tools → 76 shipped) was added, the user explicitly decided to **elevate
+this same account** — `claude_mcp_readonly` — with write roles rather than create a second dedicated write
+account or reuse the separate admin `claude_automation` account (see project memory for the full decision
+record). On this PDI, `claude_mcp_readonly` ended up carrying `user_admin` and `admin` — turned out to
+already be present on this instance's default service-account role set, not something granted
+incrementally batch-by-batch as the original plan assumed (confirmed via `sys_user_has_role` before each
+batch, only surfaced to the user when a real 403 actually occurred). **If provisioning this fresh on a new
+instance:** don't assume a broad role set will already be there — start read-only per the original steps
+above if you only want the 2 report tools; grant roles per domain as each write tool is actually needed
+(the account name stays misleading either way — renaming a live ServiceNow username is more hassle than
+it's worth). Script include writes in particular are effectively code-execution capability and deserve the
+most scrutiny of any grant in this project — see the Script Include tools section above.
 
 ## 2. Build
 
@@ -225,10 +416,25 @@ Should return `200` with a `mcp-session-id` response header and a JSON-RPC `resu
 
 ## Files
 
-- `src/servicenow-client.ts` — Table API wrapper (Basic Auth) plus `queryTableAll`, the pagination loop both
-  tools use (1000 rows/page, 10,000-row safety cap, returns `{ rows, truncated }`). Swap Basic Auth for
-  OAuth here later if moving off the PDI.
-- `src/tools/syslog.ts`, `src/tools/dev-work-report.ts` — the two report queries.
-- `src/create-server.ts` — builds an `McpServer` and registers both tools; shared by both entrypoints below.
+- `src/servicenow-client.ts` — Table API wrapper (Basic Auth): `queryTable`/`getRecord`/`createRecord`/
+  `updateRecord`/`deleteRecord`, plus `queryTableAll`, the "fetch everything up to a safety cap" pagination
+  loop the two report tools use (1000 rows/page, 10,000-row safety cap, returns `{ rows, truncated }`) — not
+  used by any `list_*` tool, which paginate one caller-controlled page at a time via plain `queryTable`.
+  Swap Basic Auth for OAuth here later if moving off the PDI.
+- `src/register-tool.ts` — `registerTool()`/`jsonResult()`: shared response framing (JSON content block,
+  prepends a `⚠ Truncated` note when a result carries `{truncated: true}`) so every domain file doesn't
+  hand-roll it.
+- `src/tools/shared.ts` — cross-domain helpers: `resolveUserSysId`/`resolveRoleSysId`/`resolveGroupSysId`/
+  `assignRoleToUser` (user/group/role lookups, reused by `user.ts` and beyond) and `buildTimeframeQuery`
+  (the `upcoming`/`in-progress`/`completed` filter shared by `change.ts`/`story.ts`/`scrum-task.ts`/
+  `project.ts` — deliberately built from a literal UTC timestamp, not `javascript:gs.now()`, to avoid the
+  timezone bug class described in Troubleshooting below).
+- `src/tools/syslog.ts`, `src/tools/dev-work-report.ts` — the two original report queries.
+- `src/tools/incident.ts`, `user.ts`, `catalog.ts`, `catalog-variables.ts`, `catalog-optimization.ts`,
+  `change.ts`, `changeset.ts`, `knowledge-base.ts`, `story.ts`, `scrum-task.ts`, `project.ts`,
+  `script-include.ts`, `workflow.ts` — the 76 ported tools, one file per reference domain; see the Tools
+  section above for what's in each and project memory for the batch-by-batch build history.
+- `src/create-server.ts` — builds an `McpServer` and registers all 78 tools, grouped by domain with a
+  comment header per section; shared by both entrypoints below.
 - `src/index.ts` — stdio entrypoint (Claude Code/Desktop); resolves `.env` relative to itself (not cwd).
 - `src/http.ts` — Streamable HTTP entrypoint (step 7); bearer-token auth, one server+transport per session.

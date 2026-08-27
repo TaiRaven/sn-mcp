@@ -119,6 +119,36 @@ import {
   ListCategoriesShape,
   listCategories,
 } from "./tools/knowledge-base.js";
+import {
+  CreateStoryShape,
+  createStory,
+  UpdateStoryShape,
+  updateStory,
+  ListStoriesShape,
+  listStories,
+  ListStoryDependenciesShape,
+  listStoryDependencies,
+  CreateStoryDependencyShape,
+  createStoryDependency,
+  DeleteStoryDependencyShape,
+  deleteStoryDependency,
+} from "./tools/story.js";
+import {
+  CreateScrumTaskShape,
+  createScrumTask,
+  UpdateScrumTaskShape,
+  updateScrumTask,
+  ListScrumTasksShape,
+  listScrumTasks,
+} from "./tools/scrum-task.js";
+import {
+  CreateProjectShape,
+  createProject,
+  UpdateProjectShape,
+  updateProject,
+  ListProjectsShape,
+  listProjects,
+} from "./tools/project.js";
 
 // Shared by both entrypoints (stdio in index.ts, HTTP in http.ts) — HTTP needs a fresh
 // server instance per session, so this can't just be a module-level singleton.
@@ -539,6 +569,105 @@ export function createReportsServer(): McpServer {
     "List knowledge base categories. limit/offset paginate — this returns one bounded page, not the full table.",
     ListCategoriesShape,
     listCategories
+  );
+
+  // --- story_tools ---
+  // Reference project's epic_tools.py is NOT ported: rm_epic is not a valid table on this PDI
+  // (confirmed 400 "Invalid table rm_epic" via a liveness check before this batch, per the plan's
+  // Batch 6 gate). story.epic/story.project params are dropped too — confirmed via sys_dictionary
+  // that rm_story has neither field on this instance's Agile plugin install.
+
+  registerTool(
+    server,
+    "create_story",
+    "Create a new story.",
+    CreateStoryShape,
+    createStory
+  );
+  registerTool(
+    server,
+    "update_story",
+    "Update an existing story (accepts sys_id or story number).",
+    UpdateStoryShape,
+    updateStory
+  );
+  registerTool(
+    server,
+    "list_stories",
+    "List stories. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListStoriesShape,
+    listStories
+  );
+  registerTool(
+    server,
+    "list_story_dependencies",
+    "List dependencies between stories (m2m_story_dependencies).",
+    ListStoryDependenciesShape,
+    listStoryDependencies
+  );
+  registerTool(
+    server,
+    "create_story_dependency",
+    "Create a dependency between two stories (dependent_story requires prerequisite_story).",
+    CreateStoryDependencyShape,
+    createStoryDependency
+  );
+  registerTool(
+    server,
+    "delete_story_dependency",
+    "Delete a story dependency record.",
+    DeleteStoryDependencyShape,
+    deleteStoryDependency
+  );
+
+  // --- scrum_task_tools ---
+  // Reference project's `type` param (Analysis/Coding/Documentation/Testing) is dropped —
+  // confirmed via sys_dictionary that rm_scrum_task has no `type` element on this PDI.
+
+  registerTool(
+    server,
+    "create_scrum_task",
+    "Create a new scrum task under a story.",
+    CreateScrumTaskShape,
+    createScrumTask
+  );
+  registerTool(
+    server,
+    "update_scrum_task",
+    "Update an existing scrum task (accepts sys_id or scrum task number).",
+    UpdateScrumTaskShape,
+    updateScrumTask
+  );
+  registerTool(
+    server,
+    "list_scrum_tasks",
+    "List scrum tasks. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListScrumTasksShape,
+    listScrumTasks
+  );
+
+  // --- project_tools ---
+
+  registerTool(
+    server,
+    "create_project",
+    "Create a new project.",
+    CreateProjectShape,
+    createProject
+  );
+  registerTool(
+    server,
+    "update_project",
+    "Update an existing project (accepts sys_id or project number).",
+    UpdateProjectShape,
+    updateProject
+  );
+  registerTool(
+    server,
+    "list_projects",
+    "List projects. limit/offset paginate — this returns one bounded page, not the full table.",
+    ListProjectsShape,
+    listProjects
   );
 
   return server;

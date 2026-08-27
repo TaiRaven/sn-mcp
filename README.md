@@ -1,12 +1,13 @@
 # sn-mcp
 
-Local MCP server for ServiceNow: two purpose-built on-demand reports (the original build), plus a full
-read/write port of [echelon-ai-labs/servicenow-mcp](https://github.com/echelon-ai-labs/servicenow-mcp) — a
-larger Python/FastMCP ServiceNow server — giving 78 tools total across 15 domains. Built from a plan kept in
-the author's private Obsidian vault ("ServiceNow MCP Server — Syslog & Dev Work Reports (Plan)"); the port
-followed its own plan, preserved at `C:\Users\willr\.claude\plans\structured-spinning-rain.md`. Setup
-narrative and troubleshooting also live in that vault, in a matching "(Setup Guide)" note — not included in
-this repo.
+Local MCP server for ServiceNow: 78 tools across 15 domains — incidents, changes, catalog, knowledge base,
+users/groups, script includes, Agile (story/scrum task/project), classic Workflow, and the two original
+on-demand reports the project started as. Most of that surface is a full read/write port of
+[echelon-ai-labs/servicenow-mcp](https://github.com/echelon-ai-labs/servicenow-mcp), a larger Python/FastMCP
+ServiceNow server. Built from a plan kept in the author's private Obsidian vault ("ServiceNow MCP Server —
+Syslog & Dev Work Reports (Plan)"); the full read/write port that took this from 2 tools to 78 followed its
+own separate plan, preserved at `C:\Users\willr\.claude\plans\structured-spinning-rain.md`. Setup narrative
+and troubleshooting also live in that vault, in a matching "(Setup Guide)" note — not included in this repo.
 
 Borrowed from the reference project: a remote-reachable HTTP transport alongside stdio (step 7 below) — it
 exposes both stdio and SSE, this project uses stdio and the modern Streamable HTTP equivalent; ServiceNow's

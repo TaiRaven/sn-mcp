@@ -15,6 +15,25 @@ what originally surfaced the timezone bug described in step 4/Troubleshooting; a
 its `AuthManager` (Basic/OAuth/API-key behind one interface), which stays out of scope; this project remains
 Basic-only.
 
+## Build history
+
+| Commit | What |
+|---|---|
+| `3a30861` | Original build: `get_syslog_report` + `get_developer_work_report`, stdio transport. |
+| `e4e6c68` | Batch 0+1 of 8 — write CRUD layer (`createRecord`/`updateRecord`/`deleteRecord`) + Incident tools. |
+| `e450682` | Batch 2 of 8 — User & Group tools. |
+| `63936c7` | Batch 3 of 8 — Catalog tools. |
+| `34c08a9` | Batch 4 of 8 — Change & Changeset tools. |
+| `873879d` | Batch 5 of 8 — Knowledge Base tools. |
+| `0163165` | Batch 6 of 8 — Story, Scrum Task & Project tools; epic tools dropped (see gap list below). |
+| `498ff17` | Batch 7 of 8 — Script Include tools. |
+| `6a00bfc` | Batch 8 of 8 (final) — classic Workflow tools; 3 tools dropped (see gap list below). Port complete: 76/82 reference tools shipped. |
+| `7a2fb41` | Full README documentation pass: per-domain tool reference, dropped-tool rationale, corrected account-provisioning guidance. |
+
+Each batch was verified end-to-end through real MCP tool calls (not just direct function tests) before
+committing — create/update/list at minimum, with test data tagged `[MCP-TEST]` and cleaned up afterward.
+Full per-batch build notes, gotchas, and platform-specific findings live in project memory, not this file.
+
 **Of the reference's 82 tools, 76 were ported** (giving 78 total with the 2 original report tools). 6 were
 deliberately not ported — not porting mistakes, each confirmed against this PDI's live schema before being
 dropped:

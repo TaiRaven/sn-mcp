@@ -1,4 +1,4 @@
-# ServiceNow MCP Reports
+# sn-mcp
 
 Local MCP server for ServiceNow: two purpose-built on-demand reports (the original build), plus a full
 read/write port of [echelon-ai-labs/servicenow-mcp](https://github.com/echelon-ai-labs/servicenow-mcp) — a
@@ -301,7 +301,7 @@ most scrutiny of any grant in this project — see the Script Include tools sect
 ## 2. Build
 
 ```powershell
-cd C:\Users\willr\projects\servicenow-mcp-reports
+cd C:\Users\willr\projects\sn-mcp
 npm install
 npm run build
 ```
@@ -334,7 +334,7 @@ instance, where the mapping should be re-verified with the same `sys_choice` que
 ## 5. Register with Claude Code CLI
 
 ```powershell
-claude mcp add --scope user servicenow-reports -- "C:\Program Files\nodejs\node.exe" C:\Users\willr\projects\servicenow-mcp-reports\dist\index.js
+claude mcp add --scope user sn-mcp -- "C:\Program Files\nodejs\node.exe" C:\Users\willr\projects\sn-mcp\dist\index.js
 ```
 
 Use the absolute path to `node.exe`, not bare `node` — a Claude Code session started before Node was on
@@ -354,9 +354,9 @@ Add to `%APPDATA%\Claude\claude_desktop_config.json` (created fresh — didn't e
 ```json
 {
   "mcpServers": {
-    "servicenow-reports": {
+    "sn-mcp": {
       "command": "C:\\Program Files\\nodejs\\node.exe",
-      "args": ["C:\\Users\\willr\\projects\\servicenow-mcp-reports\\dist\\index.js"],
+      "args": ["C:\\Users\\willr\\projects\\sn-mcp\\dist\\index.js"],
       "env": {
         "SN_INSTANCE": "https://dev203275.service-now.com",
         "SN_USER": "claude_mcp_readonly",

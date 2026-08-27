@@ -5,7 +5,7 @@ import { randomUUID } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { createReportsServer } from "./create-server.js";
+import { createSnMcpServer } from "./create-server.js";
 
 // Remote-reachable alternative to index.ts's stdio transport — e.g. for claude.ai hosted
 // Scheduled Tasks, which (unlike Claude Code/Desktop) can't spawn a local stdio process and
@@ -58,7 +58,7 @@ app.all("/mcp", async (req: Request, res: Response) => {
     created.onclose = () => {
       if (created.sessionId) transports.delete(created.sessionId);
     };
-    const server = createReportsServer();
+    const server = createSnMcpServer();
     await server.connect(created);
     transport = created;
   }
@@ -67,5 +67,5 @@ app.all("/mcp", async (req: Request, res: Response) => {
 });
 
 app.listen(PORT, HOST, () => {
-  console.log(`servicenow-reports MCP server listening at http://${HOST}:${PORT}/mcp`);
+  console.log(`sn-mcp MCP server listening at http://${HOST}:${PORT}/mcp`);
 });

@@ -1,9 +1,9 @@
 {
-  "name": "servicenow-mcp-reports",
+  "name": "sn-mcp",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "Local MCP server exposing ServiceNow syslog and developer work reports.",
+  "description": "Local MCP server for ServiceNow: on-demand reports plus a full read/write tool set (incidents, changes, catalog, knowledge base, script includes, Agile, classic Workflow).",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",

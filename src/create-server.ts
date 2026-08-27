@@ -184,9 +184,9 @@ import {
 
 // Shared by both entrypoints (stdio in index.ts, HTTP in http.ts) — HTTP needs a fresh
 // server instance per session, so this can't just be a module-level singleton.
-export function createReportsServer(): McpServer {
+export function createSnMcpServer(): McpServer {
   const server = new McpServer({
-    name: "servicenow-reports",
+    name: "sn-mcp",
     version: "1.0.0",
   });
 
